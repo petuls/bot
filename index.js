@@ -78,6 +78,13 @@ for (const file of loggingFiles) {
     }
 }
 
+function restartClient() {
+    console.log('Restarting client...');
+    client.destroy();
+    client.login(config.token);
+    console.log("Client restarted.");
+}
+
 client.on('error', error => {
     console.error('The WebSocket encountered an error:', error);
     restartClient();
@@ -116,12 +123,6 @@ process.on('uncaughtException', error => {
     // Optionally restart the bot or take other actions to maintain uptime
 });
 
-function restartClient() {
-    console.log('Restarting client...');
-    client.destroy();
-    client.login(config.token);
-    console.log("Client restarted.");
-}
 
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down gracefully.');
