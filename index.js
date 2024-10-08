@@ -76,13 +76,16 @@ client.on('messageCreate', async message => {
 
 client.on('error', error => {
     console.error('The WebSocket encountered an error:', error);
+    restartClient();
 });
 client.on('shardError', error => {
     console.error('A websocket connection encountered an error:', error);
+    restartClient();
 });
 
 process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
+    restartClient();
 });
 
 client.on('rateLimit', info => {
@@ -99,8 +102,15 @@ client.on('missingPermissions', (message, command, missingPermissions) => {
 
 process.on('uncaughtException', error => {
     console.error('Uncaught exception:', error);
+    restartClient();
     // Optionally restart the bot or take other actions to maintain uptime
 });
+
+function restartClient() {
+    console.log('Restarting client...');
+    client.destroy();
+    client.login(config.token);
+}
 
 process.on('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down gracefully.');
