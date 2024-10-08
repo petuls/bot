@@ -1,20 +1,27 @@
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, Partials } = require('discord.js');
 const config = require('./config.json');
 const fs = require('fs');
 const path = require('path');
 
-let client;
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessageReactions
+    ],
+    partials: [
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction
+    ]
+});
 
-try {
-    client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
-} catch (error) {
-    if (error.message.includes('Invalid bitfield flag')) {
-        console.error('Invalid bitfield flag provided:', error);
-    } else {
-        console.error('Error initializing client:', error);
-    }
-    process.exit(1);
-}
+const flags = {
+    RESTART_ON_ERROR: true,
+    LOG_COMMAND_USAGE: true
+};
 
 client.commands = new Map();
 const commands = [];
@@ -58,7 +65,6 @@ client.on('interactionCreate', async interaction => {
     const command = client.commands.get(interaction.commandName);
 
     if (!command) return;
-
     try {
         await command.execute(interaction);
     } catch (error) {
@@ -66,17 +72,6 @@ client.on('interactionCreate', async interaction => {
         await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
 });
-
-// Load logging functions from the logging folder
-const loggingFiles = fs.readdirSync(path.join(__dirname, 'logging')).filter(file => file.endsWith('.js'));
-
-for (const file of loggingFiles) {
-    const loggingFunction = require(path.join(__dirname, 'logging', file));
-    if (typeof loggingFunction === 'function') {
-        client.on('messageCreate', loggingFunction);
-        console.log(`Loaded logging function from: ${file}`);
-    }
-}
 
 function restartClient() {
     console.log('Restarting client...');
@@ -120,18 +115,17 @@ client.on('missingPermissions', (message, command, missingPermissions) => {
 process.on('uncaughtException', error => {
     console.error('Uncaught exception:', error);
     restartClient();
-    // Optionally restart the bot or take other actions to maintain uptime
 });
 
 
 process.on('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully.');
+    console.log('Received SIGTERM, shutting down.');
     client.destroy();
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
-    console.log('Received SIGINT, shutting down gracefully.');
+    console.log('Received SIGINT, shutting down.');
     client.destroy();
     process.exit(0);
 });

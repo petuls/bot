@@ -1,3 +1,3 @@
-# TEST
+# Test Discord bot
 
-This is a bot 4 Discord, made using AI. 
+This is an AI Discord bot prototype, everything is subject to change. Made mostly by AI. 
