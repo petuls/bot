@@ -1,5 +1,4 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { description } = require('./kick');
 
 module.exports = {
     name: 'ping',

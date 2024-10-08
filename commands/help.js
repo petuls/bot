@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { category } = require('./ban');
 
 module.exports = {
     data: new SlashCommandBuilder()

@@ -1,3 +1,5 @@
+// what
+
 const { Client, GatewayIntentBits, REST, Routes, Partials } = require('discord.js');
 const config = require('./config.json');
 const fs = require('fs');
