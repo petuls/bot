@@ -3,7 +3,18 @@ const config = require('./config.json');
 const fs = require('fs');
 const path = require('path');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
+let client;
+
+try {
+    client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
+} catch (error) {
+    if (error.message.includes('Invalid bitfield flag')) {
+        console.error('Invalid bitfield flag provided:', error);
+    } else {
+        console.error('Error initializing client:', error);
+    }
+    process.exit(1);
+}
 
 client.commands = new Map();
 const commands = [];
@@ -13,9 +24,13 @@ const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(fil
 
 for (const file of commandFiles) {
     const command = require(path.join(__dirname, 'commands', file));
-    client.commands.set(command.name, command);
-    commands.push(command.data.toJSON());
-    console.log(`Loaded command: ${command.name}`);
+    if (command.name && command.data && typeof command.data.toJSON === 'function') {
+        client.commands.set(command.name, command);
+        commands.push(command.data.toJSON());
+        console.log(`Loaded command: ${command.name}`);
+    } else {
+        console.warn(`Command at ${file} is missing required properties.`);
+    }
 }
 
 client.once('ready', async () => {
@@ -52,27 +67,16 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.on('messageCreate', async message => {
-    if (!message.content.startsWith(config.prefix) || message.author.bot) return;
+// Load logging functions from the logging folder
+const loggingFiles = fs.readdirSync(path.join(__dirname, 'logging')).filter(file => file.endsWith('.js'));
 
-    const args = message.content.slice(config.prefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
-
-    if (commandName === 'help') {
-        const helpMessage = client.commands.map(cmd => `\`${cmd.name}\`: ${cmd.description}`).join('\n');
-        return message.reply(`Here are the available commands:\n${helpMessage}`);
+for (const file of loggingFiles) {
+    const loggingFunction = require(path.join(__dirname, 'logging', file));
+    if (typeof loggingFunction === 'function') {
+        client.on('messageCreate', loggingFunction);
+        console.log(`Loaded logging function from: ${file}`);
     }
-
-    const command = client.commands.get(commandName);
-    if (!command) return;
-
-    try {
-        await command.execute(message, args);
-    } catch (error) {
-        console.error(`Error executing command ${commandName}:`, error);
-        message.reply('There was an error trying to execute that command!');
-    }
-});
+}
 
 client.on('error', error => {
     console.error('The WebSocket encountered an error:', error);
@@ -96,8 +100,16 @@ client.on('warn', info => {
     console.warn('Warning:', info);
 });
 
+client.on('invalidRequestWarning', (info) => {
+    console.warn('Invalid request warning:', info);
+    restartClient();
+});
+
+
+
 client.on('missingPermissions', (message, command, missingPermissions) => {
     message.reply(`You are missing the following permissions to execute the ${command} command: ${missingPermissions.join(', ')}`);
+    restartClient();
 });
 
 process.on('uncaughtException', error => {
@@ -110,6 +122,7 @@ function restartClient() {
     console.log('Restarting client...');
     client.destroy();
     client.login(config.token);
+    console.log("Client restarted.");
 }
 
 process.on('SIGTERM', () => {
