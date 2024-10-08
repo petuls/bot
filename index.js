@@ -105,8 +105,6 @@ client.on('invalidRequestWarning', (info) => {
     restartClient();
 });
 
-
-
 client.on('missingPermissions', (message, command, missingPermissions) => {
     message.reply(`You are missing the following permissions to execute the ${command} command: ${missingPermissions.join(', ')}`);
     restartClient();

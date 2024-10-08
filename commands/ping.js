@@ -7,6 +7,7 @@ module.exports = {
         .setName('ping')
         .setDescription('Replies with Pong! and measures the response time.'),
     description: "Replies with Pong! and measures the response time.",
+    category: "Misc",
     async execute(interaction) {
         const sent = await interaction.reply({ content: 'Pong!', fetchReply: true });
         const timeTaken = sent.createdTimestamp - interaction.createdTimestamp;

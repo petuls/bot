@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const { category } = require('./ban');
 
 module.exports = {
     name: 'kick',
@@ -10,6 +11,7 @@ module.exports = {
                 .setDescription('The user to kick')
                 .setRequired(true)),
     description: "Kicks a user from the server.",
+    category: "Moderation",
     async execute(interaction) {
         if (interaction.user.bot) {
             return;

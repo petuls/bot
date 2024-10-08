@@ -1,15 +1,16 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 
 module.exports = {
-    name: 'kick',
+    name: 'ban',
     data: new SlashCommandBuilder()
-        .setName('kick')
-        .setDescription('Kicks a user from the server.')
+        .setName('ban')
+        .setDescription('Bans a user from the server.')
         .addUserOption(option => 
             option.setName('target')
-                .setDescription('The user to kick')
+                .setDescription('The user to ban')
                 .setRequired(true)),
-    description: "Kicks a user from the server.",
+    description: "Bans a user from the server.",
+    category: "Moderation",
     async execute(interaction) {
         if (interaction.user.bot) {
             return;
@@ -19,24 +20,24 @@ module.exports = {
         const member = interaction.guild.members.cache.get(target.id);
         const botMember = interaction.guild.members.cache.get(interaction.client.user.id);
 
-        if (!interaction.member.permissions.has('KICK_MEMBERS')) {
-            return interaction.reply('You do not have permission to kick members.');
+        if (!interaction.member.permissions.has('BAN_MEMBERS')) {
+            return interaction.reply('You do not have permission to ban members.');
         }
 
-        if (!botMember.permissions.has('KICK_MEMBERS')) {
-            return interaction.reply('I do not have permission to kick members.');
+        if (!botMember.permissions.has('BAN_MEMBERS')) {
+            return interaction.reply('I do not have permission to ban members.');
         }
 
         if (member) {
-            await member.kick();
-            await interaction.reply(`${target.tag} has been kicked.`);
+            await member.ban();
+            await interaction.reply(`${target.tag} has been banned.`);
         } else {
             await interaction.reply('That user is not in the server.');
         }
     },
     info: {
-        name: 'kick',
-        description: 'Kicks a user from the server.',
-        usage: '/kick <user>'
+        name: 'ban',
+        description: 'Bans a user from the server.',
+        usage: '/ban <user>'
     }
 };
