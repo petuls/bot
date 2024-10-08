@@ -1,18 +1,76 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
 const config = require('./config.json');
+const fs = require('fs');
+const path = require('path');
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
 
-client.once('ready', () => {
+client.commands = new Map();
+const commands = [];
+
+// Load commands from the commands folder
+const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const command = require(path.join(__dirname, 'commands', file));
+    client.commands.set(command.name, command);
+    commands.push(command.data.toJSON());
+    console.log(`Loaded command: ${command.name}`);
+}
+
+client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
+
+    const rest = new REST({ version: '10' }).setToken(config.token);
+
+    try {
+        console.log('Started refreshing application (/) commands.');
+
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands },
+        );
+
+        console.log('Successfully reloaded application (/) commands.');
+    } catch (error) {
+        console.error(error);
+    }
 });
 
-client.on('messageCreate', message => {
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isCommand()) return;
+
+    const command = client.commands.get(interaction.commandName);
+
+    if (!command) return;
+
     try {
-        if (message.content === '!ping') {
-            message.reply('!ping');
-        }
+        await command.execute(interaction);
     } catch (error) {
-        console.error('Error handling messageCreate event:', error);
+        console.error(`Error executing command ${interaction.commandName}:`, error);
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
+});
+
+client.on('messageCreate', async message => {
+    if (!message.content.startsWith(config.prefix) || message.author.bot) return;
+
+    const args = message.content.slice(config.prefix.length).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    if (commandName === 'help') {
+        const helpMessage = client.commands.map(cmd => `\`${cmd.name}\`: ${cmd.description}`).join('\n');
+        return message.reply(`Here are the available commands:\n${helpMessage}`);
+    }
+
+    const command = client.commands.get(commandName);
+    if (!command) return;
+
+    try {
+        await command.execute(message, args);
+    } catch (error) {
+        console.error(`Error executing command ${commandName}:`, error);
+        message.reply('There was an error trying to execute that command!');
     }
 });
 
@@ -54,31 +112,6 @@ process.on('SIGINT', () => {
     console.log('Received SIGINT, shutting down gracefully.');
     client.destroy();
     process.exit(0);
-});
-
-client.on('messageCreate', async message => {
-    try {
-        if (message.content.startsWith('!ban')) {
-            if (!message.member || !message.member.permissions.has('BAN_MEMBERS') || !message.guild.me || !message.guild.me.permissions.has('BAN_MEMBERS')) {
-                return message.reply('You do not have permission to use this command.');
-            }
-
-            const user = message.mentions.users.first();
-            if (!user) {
-                return message.reply('Please mention a user to ban.');
-            }
-
-            const member = message.guild.members.resolve(user);
-            if (!member) {
-                return message.reply('User not found.');
-            }
-
-            await member.ban();
-            message.reply(`${user.tag} has been banned.`);
-        }
-    } catch (error) {
-        console.error('Error handling messageCreate event:', error);
-    }
 });
 
 client.login(config.token);
