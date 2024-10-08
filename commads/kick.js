@@ -9,9 +9,23 @@ module.exports = {
             option.setName('target')
                 .setDescription('The user to kick')
                 .setRequired(true)),
+    description: "Kicks a user from the server.",
     async execute(interaction) {
+        if (interaction.user.bot) {
+            return;
+        }
+
         const target = interaction.options.getUser('target');
         const member = interaction.guild.members.cache.get(target.id);
+        const botMember = interaction.guild.members.cache.get(interaction.client.user.id);
+
+        if (!interaction.member.permissions.has('KICK_MEMBERS')) {
+            return interaction.reply('You do not have permission to kick members.');
+        }
+
+        if (!botMember.permissions.has('KICK_MEMBERS')) {
+            return interaction.reply('I do not have permission to kick members.');
+        }
 
         if (member) {
             await member.kick();
